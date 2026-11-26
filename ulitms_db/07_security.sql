@@ -33,7 +33,7 @@ GRANT SELECT ON vw_active_catalog, vw_pending_borrow_requests, vw_active_borrowi
                 vw_audit_trail, vw_inventory_check TO app_user;
 
 -- tables: read
-GRANT SELECT ON book_categories, books, borrow_transactions, elibrary_units,
+GRANT SELECT ON book_categories, books, borrow_transactions,
                 elibrary_sessions, peripheral_categories, peripherals,
                 damage_reports, notifications TO app_user;
 
@@ -43,8 +43,47 @@ GRANT SELECT (user_id, student_number, first_name, last_name, email, role,
               created_at, updated_at, deleted_at)
       ON users TO app_user;
 
--- tables: write (no DELETE anywhere)
-GRANT INSERT, UPDATE ON users, book_categories, books, borrow_transactions,
-                        elibrary_units, elibrary_sessions, peripheral_categories,
-                        peripherals, damage_reports, notifications TO app_user;
+-- Tables: write permissions (no DELETE anywhere).
+GRANT INSERT, UPDATE ON
+    book_categories,
+    books,
+    borrow_transactions,
+    elibrary_sessions,
+    peripheral_categories,
+    damage_reports,
+    notifications
+TO app_user;
+
+-- Peripherals: allow condition updates only through authorized workflows.
+GRANT UPDATE (condition)
+ON peripherals TO app_user;
+
+-- Users: restrict INSERT and UPDATE to permitted columns.
+REVOKE INSERT, UPDATE ON TABLE users FROM app_user;
+
+-- Registration: role is intentionally excluded.
+GRANT INSERT (
+    student_number,
+    first_name,
+    last_name,
+    email,
+    password_hash,
+    course,
+    year_level
+)
+ON users TO app_user;
+
+-- Profile and authorized account-management updates.
+GRANT UPDATE (
+    first_name,
+    last_name,
+    course,
+    year_level,
+    contact_number,
+    status,
+    deleted_at,
+    updated_at
+)
+ON users TO app_user;
+
 GRANT INSERT ON system_logs TO app_user;

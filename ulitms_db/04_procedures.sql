@@ -15,9 +15,9 @@ SET search_path TO library, public;
 
 -- ---------------------------------------------------------------------
 -- P1. sp_register_user
---     API: POST /api/auth/register   (password already hashed by API)
---     CALL sp_register_user('2026-0010','Ana','Reyes','ana@ulitms.edu',
---                           '<bcrypt>','student','BSIS',2,NULL);
+--     API: POST /api/auth/register
+--     Password is already hashed by the API.
+--     Role is automatically assigned as 'student' by the database.
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE PROCEDURE sp_register_user(
     p_student_number VARCHAR,
@@ -25,7 +25,6 @@ CREATE OR REPLACE PROCEDURE sp_register_user(
     p_last_name      VARCHAR,
     p_email          VARCHAR,
     p_password_hash  VARCHAR,
-    p_role           VARCHAR,
     p_course         VARCHAR,
     p_year_level     INT,
     INOUT p_user_id  INT
@@ -33,14 +32,30 @@ CREATE OR REPLACE PROCEDURE sp_register_user(
 LANGUAGE plpgsql AS $$
 BEGIN
     BEGIN
-        INSERT INTO users (student_number, first_name, last_name, email,
-                           password_hash, role, course, year_level)
-        VALUES (p_student_number, p_first_name, p_last_name, p_email,
-                p_password_hash, p_role, p_course, p_year_level)
+        INSERT INTO users (
+            student_number,
+            first_name,
+            last_name,
+            email,
+            password_hash,
+            course,
+            year_level
+        )
+        VALUES (
+            p_student_number,
+            p_first_name,
+            p_last_name,
+            p_email,
+            p_password_hash,
+            p_course,
+            p_year_level
+        )
         RETURNING user_id INTO p_user_id;
+
     EXCEPTION WHEN unique_violation THEN
         RAISE EXCEPTION 'Email or student number is already registered';
     END;
+
     COMMIT;
 END;
 $$;
@@ -109,6 +124,10 @@ BEGIN
                      AND status = 'active' AND deleted_at IS NULL) THEN
         RAISE EXCEPTION 'Only an active administrator can decide requests';
     END IF;
+
+    SELECT pg_get_functiondef(
+    'library.sp_resolve_damage_report(integer,integer,character varying,text,character varying)'::regprocedure
+);
 
     IF p_decision NOT IN ('approve', 'reject') THEN
         RAISE EXCEPTION 'Decision must be approve or reject, got %', p_decision;
